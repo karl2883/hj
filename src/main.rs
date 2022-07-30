@@ -1,3 +1,3 @@
 fn main() {
-    println!("WIP");
+    println!("The compiler is currently under development");
 }
