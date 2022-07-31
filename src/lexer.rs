@@ -19,6 +19,29 @@ pub enum TokenType {
     Keyword // let, if, else, while, ...
 }
 
+impl TokenType {
+    fn debug_str(&self) -> &str {
+        match &self {
+            TokenType::Operator => "Operator",
+            TokenType::AssignmentOperator => "Assignment operator",
+            TokenType::OpenParan => "Opening paranthesis",
+            TokenType::CloseParan => "Closing paranthesis",
+            TokenType::OpenBracket => "Opening bracket",
+            TokenType::CloseBracket => "Closing bracket",
+            TokenType::OpenBrace => "Opening brace",
+            TokenType::CloseBrace => "Closing brace",
+            TokenType::InbuiltType => "Inbuilt type",
+            TokenType::Name => "Custom name",
+            TokenType::NumberLiteral => "Number literal",
+            TokenType::StringLiteral => "String literal",
+            TokenType::CharLiteral => "Char literal",
+            TokenType::BoolLiteral => "Bool literal",
+            TokenType::Semicolon => "Semicolon",
+            TokenType::Keyword => "Keyword"
+        }
+    }
+}
+
 const INBUILT_TYPES: [&str; 7] = ["int", "uint", "float", "ufloat", "bool", "char", "str"];
 const KEYWORDS: [&str; 4] = ["let", "if", "else", "while"];
 const BOOL_LITERALS: [&str; 2] = ["true", "false"];
@@ -31,6 +54,10 @@ pub struct Token {
 impl Token {
     fn new(kind: TokenType, contents: String) -> Token {
         Token { kind, value: contents }
+    }
+
+    pub fn debug_str(&self) -> String {
+        format!("{} (\"{}\")", self.kind.debug_str(), self.value)
     }
 }
 

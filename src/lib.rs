@@ -44,6 +44,11 @@ pub fn run(config: Config) -> Result<(), ()> {
     
     let tokens = create_tokens(source);
 
-    output::print_debug("Tokens have been generated successfully!");
+    if config.debug {
+        output::print_debug("Tokens have been generated successfully!");
+        let token_str = tokens.iter().map(|token| token.debug_str()).collect::<Vec<String>>().join(",\n");
+        output::print_debug(format!("Tokens: {}", token_str).as_str());
+    }
+
     Ok(())
 }
