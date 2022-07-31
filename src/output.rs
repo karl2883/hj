@@ -1,5 +1,12 @@
 use colored::Colorize;
 
+pub fn print_process(verb: &str, rest: &str) {
+    println!("{} {}",
+        format!("{}", verb).blue().bold(),
+        rest
+    );
+}
+
 pub fn print_debug(msg: &str) {
     println!("{} {}",
         format!("Debug:").green().bold(),

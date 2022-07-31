@@ -29,7 +29,7 @@ pub struct Config {
 
 pub fn run(config: Config) -> Result<(), ()> {
 
-    println!("Compiling file {}...", config.file);
+    output::print_process("Compiling", format!("file {}...", config.file).as_str());
     if config.debug {
         output::print_debug("Printing debug information!")
     }
@@ -44,6 +44,6 @@ pub fn run(config: Config) -> Result<(), ()> {
     
     let tokens = create_tokens(source);
 
-    println!("Tokens have been generated!");
+    output::print_debug("Tokens have been generated successfully!");
     Ok(())
 }
