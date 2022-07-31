@@ -130,7 +130,7 @@ impl<'a> Tokenizer<'a> {
         string
     }
 
-    fn peek_until(&self, searched: char, offset: usize) -> Option<String> {
+    fn peek_until(&self, searched: char, offset: usize, or_eof: bool) -> Option<String> {
         let mut string = String::new();
         let mut cloned = self.chars.clone();
         for _ in 0..offset {
@@ -145,7 +145,13 @@ impl<'a> Tokenizer<'a> {
                         string.push(c);
                     }
                 }
-                None => { return None; }
+                None => {
+                    if or_eof {
+                        break;
+                    } else {
+                        return None;
+                    }
+                }
             }
         }
         Some(string)
@@ -181,6 +187,11 @@ impl<'a> Tokenizer<'a> {
             '=' => Token::new(TokenType::AssignmentOperator, first_char.to_string()),
 
             '+' | '-' | '*' | '/' | '%' => {
+                if first_char == '/' && self.peek(2).unwrap_or(' ') == '/' {
+                    let comment = self.peek_until('\n', 2, true).unwrap();
+                    self.advance(comment.len()+2).unwrap();
+                    return Ok(None);
+                }
                 if self.peek(2).unwrap_or(' ') == '=' {
                     Token::new(TokenType::AssignmentOperator, self.peek_string(2).unwrap())
                 } else {
@@ -189,7 +200,7 @@ impl<'a> Tokenizer<'a> {
             },
 
             '\'' => {
-                if let Some(mut contents) = self.peek_until('\'', 1) {
+                if let Some(mut contents) = self.peek_until('\'', 1, false) {
                     contents.push('\'');
                     contents.insert(0, '\'');
                     Token::new(TokenType::CharLiteral, contents)
@@ -199,7 +210,7 @@ impl<'a> Tokenizer<'a> {
             }
 
             '"' => {
-                if let Some(mut contents) = self.peek_until('"', 1) {
+                if let Some(mut contents) = self.peek_until('"', 1, false) {
                     contents.push('"');
                     contents.insert(0, '"');
                     Token::new(TokenType::StringLiteral, contents)
