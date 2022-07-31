@@ -42,7 +42,13 @@ pub fn run(config: Config) -> Result<(), ()> {
         }
     };
     
-    let tokens = create_tokens(source);
+    let tokens = match create_tokens(source) {
+        Ok(t) => t,
+        Err(e) => {
+            output::print_error(e.as_str());
+            return Err(());
+        }
+    };
 
     if config.debug {
         output::print_debug("Tokens have been generated successfully!");

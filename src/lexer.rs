@@ -161,13 +161,13 @@ impl<'a> Tokenizer<'a> {
         Ok(())
     }
 
-    fn next_token(&mut self) -> Option<Token> {
+    fn next_token(&mut self) -> Result<Option<Token>, String> {
         let first_char = self.peek(1).unwrap();
 
         let token = match first_char {
             ' ' | '\n' | '\t' =>  {
                 self.chars.next();
-                return None
+                return Ok(None)
             }
 
             // simple one-character tokens
@@ -194,7 +194,7 @@ impl<'a> Tokenizer<'a> {
                     contents.insert(0, '\'');
                     Token::new(TokenType::CharLiteral, contents)
                 } else {
-                    panic!("Unexpected EOF (you have to close the \' character literal!)") 
+                    return Err("Unexpected EOF (you have to close the \' character literal!)".to_owned()) 
                 }
             }
 
@@ -204,7 +204,7 @@ impl<'a> Tokenizer<'a> {
                     contents.insert(0, '"');
                     Token::new(TokenType::StringLiteral, contents)
                 } else {
-                    panic!("Unexpected EOF (you have to close the \" string literal!)") 
+                    return Err("Unexpected EOF (you have to close the \" string literal!)".to_owned()) 
                 }
             }
             
@@ -214,7 +214,7 @@ impl<'a> Tokenizer<'a> {
                     if num.chars().filter(|c| *c == '.').count() <= 1 && !num.starts_with('.') && !num.ends_with('.') {
                         Token::new(TokenType::NumberLiteral, self.peek_number())
                     } else {
-                        panic!("Invalid number syntax!")
+                        return Err("Invalid number syntax!".to_owned())
                     }
                 } else if first_char.is_ascii_alphabetic() {
                     let name: String = self.peek_name();
@@ -228,28 +228,28 @@ impl<'a> Tokenizer<'a> {
                         Token::new(TokenType::Name, name)
                     }
                 } else {
-                    panic!("Unexpected character '{}'!", first_char);
+                    return Err(format!("Unexpected character '{}'!", first_char));
                 }
             }
 
         };
-        Some(token)
+        Ok(Some(token))
     }
 }
 
 
-pub fn create_tokens(source: String) -> Vec<Token> {
+pub fn create_tokens(source: String) -> Result<Vec<Token>, String> {
     let mut tokens: Vec<Token> = vec![];
     
     let mut tokenizer = Tokenizer::new(&source);
 
     while !tokenizer.is_empty() {
-        let token = tokenizer.next_token();
+        let token = tokenizer.next_token()?;
         if let Some(token) = token {
             tokenizer.advance(token.value.len()).unwrap();
             tokens.push(token);
         } 
     }
 
-    tokens
+    Ok(tokens)
 }
