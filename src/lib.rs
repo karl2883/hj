@@ -1,8 +1,11 @@
+use std::fs;
+
 use clap::Parser;
 
 use crate::lexer::create_tokens;
 
 mod lexer;
+mod output;
 
 // clap generates cli parsing into this struct for us through macros
 
@@ -26,16 +29,21 @@ pub struct Config {
 
 pub fn run(config: Config) -> Result<(), ()> {
 
-    println!("Compiling file {}!", config.file);
+    println!("Compiling file {}...", config.file);
     if config.debug {
-        println!("Printing debug information!");
+        output::print_debug("Printing debug information!")
     }
-    if let Some(output_file) = &config.output {
-        println!("Outputting to file {output_file}!");
-    }
-    
-    let tokens = create_tokens(String::from("let i = 1 + false;"));
 
-    println!("Under construction!");
+    let source = match fs::read_to_string(&config.file) {
+        Ok(src) => src,
+        Err(e) => {
+            output::print_error(format!("Error reading from source file \"{}\": {}", &config.file, e).as_str());
+            return Err(());
+        }
+    };
+    
+    let tokens = create_tokens(source);
+
+    println!("Tokens have been generated!");
     Ok(())
 }

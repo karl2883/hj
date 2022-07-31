@@ -1,0 +1,5 @@
+let i = 29;
+let j = 5 + i * 2;
+print(j);
+j += 2;
+print(j);
