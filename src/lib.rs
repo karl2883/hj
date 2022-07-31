@@ -5,6 +5,7 @@ use clap::Parser;
 use crate::lexer::create_tokens;
 
 mod lexer;
+mod parser;
 mod output;
 
 // clap generates cli parsing into this struct for us through macros
