@@ -3,8 +3,8 @@ use std::str::Chars;
 pub enum TokenType {
     Operator, // +-*/ and so on
     AssignmentOperator, // = += -= *= /= ++ -- and so on
-    OpenParan, // (
-    CloseParan, // )
+    OpenParen, // (
+    CloseParen, // )
     OpenBracket, // [
     CloseBracket, // ]
     OpenBrace, // {
@@ -24,8 +24,8 @@ impl TokenType {
         match &self {
             TokenType::Operator => "Operator",
             TokenType::AssignmentOperator => "Assignment operator",
-            TokenType::OpenParan => "Opening paranthesis",
-            TokenType::CloseParan => "Closing paranthesis",
+            TokenType::OpenParen => "Opening parenthesis",
+            TokenType::CloseParen => "Closing parenthesis",
             TokenType::OpenBracket => "Opening bracket",
             TokenType::CloseBracket => "Closing bracket",
             TokenType::OpenBrace => "Opening brace",
@@ -171,8 +171,8 @@ impl<'a> Tokenizer<'a> {
             }
 
             // simple one-character tokens
-            '(' => Token::new(TokenType::OpenParan, first_char.to_string()),
-            ')' => Token::new(TokenType::CloseParan, first_char.to_string()),
+            '(' => Token::new(TokenType::OpenParen, first_char.to_string()),
+            ')' => Token::new(TokenType::CloseParen, first_char.to_string()),
             '[' => Token::new(TokenType::OpenBracket, first_char.to_string()),
             ']' => Token::new(TokenType::CloseBracket, first_char.to_string()),
             '{' => Token::new(TokenType::OpenBrace, first_char.to_string()),
@@ -211,7 +211,7 @@ impl<'a> Tokenizer<'a> {
             _ => {
                 if first_char.is_ascii_digit() {
                     let num = self.peek_number();
-                    if num.chars().filter(|c| c == '.').count() <= 0 && !num.starts_with('.') && !num.ends_with('.') {
+                    if num.chars().filter(|c| *c == '.').count() <= 1 && !num.starts_with('.') && !num.ends_with('.') {
                         Token::new(TokenType::NumberLiteral, self.peek_number())
                     } else {
                         panic!("Invalid number syntax!")

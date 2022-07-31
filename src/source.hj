@@ -5,3 +5,5 @@ j += 2;
 print(j);
 let s = "I like bananas";
 print(s);
+let uint k = 54;
+let char r = 'r';
