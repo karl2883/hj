@@ -210,7 +210,12 @@ impl<'a> Tokenizer<'a> {
             
             _ => {
                 if first_char.is_ascii_digit() {
-                    Token::new(TokenType::NumberLiteral, self.peek_number())
+                    let num = self.peek_number();
+                    if num.chars().filter(|c| c == '.').count() <= 0 && !num.starts_with('.') && !num.ends_with('.') {
+                        Token::new(TokenType::NumberLiteral, self.peek_number())
+                    } else {
+                        panic!("Invalid number syntax!")
+                    }
                 } else if first_char.is_ascii_alphabetic() {
                     let name: String = self.peek_name();
                     if KEYWORDS.contains(&name.as_str()) {
