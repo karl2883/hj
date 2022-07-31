@@ -1,7 +1,6 @@
 use hj::Config;
 use clap::Parser;
 
-
 fn main() {
     let args = Config::parse();
 

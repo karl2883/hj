@@ -1,5 +1,8 @@
 use clap::Parser;
 
+use crate::lexer::create_tokens;
+
+mod lexer;
 
 // clap generates cli parsing into this struct for us through macros
 
@@ -7,7 +10,7 @@ use clap::Parser;
 #[clap(name = "hj compiler")]
 #[clap(author = "karl2883 & Trubiso")]
 #[clap(version = "0.0")]
-#[clap(about = "Compiles hj source files into executables")]
+#[clap(about = "Compiles hj source files into executables.")]
 pub struct Config {
     /// The name of the output file
     #[clap(short, long)]
@@ -30,6 +33,8 @@ pub fn run(config: Config) -> Result<(), ()> {
     if let Some(output_file) = &config.output {
         println!("Outputting to file {output_file}!");
     }
+    
+    let tokens = create_tokens(String::from("let i = 1 + false;"));
 
     println!("Under construction!");
     Ok(())
