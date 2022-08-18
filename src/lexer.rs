@@ -9,6 +9,7 @@ pub enum TokenType {
     CloseBracket, // ]
     OpenBrace, // {
     CloseBrace, // }
+    Comma,
     InbuiltType, // int, uint, float, ufloat, bool, char, str
     Name, // custom names, e.g. for variables
     NumberLiteral, // all 4 number types (int/uint/float/ufloat)
@@ -30,6 +31,7 @@ impl TokenType {
             TokenType::CloseBracket => "Closing bracket",
             TokenType::OpenBrace => "Opening brace",
             TokenType::CloseBrace => "Closing brace",
+            TokenType::Comma => "Comma",
             TokenType::InbuiltType => "Inbuilt type",
             TokenType::Name => "Custom name",
             TokenType::NumberLiteral => "Number literal",
@@ -183,6 +185,7 @@ impl<'a> Tokenizer<'a> {
             ']' => Token::new(TokenType::CloseBracket, first_char.to_string()),
             '{' => Token::new(TokenType::OpenBrace, first_char.to_string()),
             '}' => Token::new(TokenType::CloseBrace, first_char.to_string()),
+            ',' => Token::new(TokenType::Comma, first_char.to_string()),
             ';' => Token::new(TokenType::Semicolon, first_char.to_string()),
             '=' => Token::new(TokenType::AssignmentOperator, first_char.to_string()),
 
