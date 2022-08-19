@@ -20,10 +20,17 @@ impl Operator {
             _ => panic!("Internal compiler error (unknown operator)")
         }
     }
+
+    fn priority_score(&self) -> u32 {
+        match self {
+            Operator::Plus | Operator::Minus => 1,
+            Operator::Multiply | Operator::Divide | Operator::Modulo => 2,
+        }
+    }
 }
 
 #[derive(Debug)]
-struct ScopeNode {
+pub struct ScopeNode {
     commands: Vec<CommandNode>,
 }
 
@@ -69,6 +76,11 @@ struct FloatLiteralNode {
 }
 
 #[derive(Debug)]
+struct BoolLiteralNode {
+    value: bool,
+}
+
+#[derive(Debug)]
 struct StringLiteralNode {
     value: String,
 }
@@ -103,18 +115,19 @@ enum ExpressionNode {
     VariableNode(VariableNode),
     IntLiteralNode(IntLiteralNode),
     FloatLiteralNode(FloatLiteralNode),
+    BoolLiteralNode(BoolLiteralNode),
     StringLiteralNode(StringLiteralNode),
     CharLiteralNode(CharLiteralNode),
     FunctionCallNode(FunctionCallNode),
 }
 
-struct Parser {
+pub struct Parser {
     tokens: Vec<Token>,
     idx: usize,
 }
 
 impl Parser {
-    fn new(tokens: Vec<Token>) -> Parser {
+    pub fn new(tokens: Vec<Token>) -> Parser {
         Parser { tokens, idx: 0 }
     }
 
@@ -145,8 +158,171 @@ impl Parser {
         }
     }
 
+    fn parse_single_value(&mut self) -> Result<ExpressionNode, String> {
+        let next_token = self.next_or_err("Unexpected EOF when trying to parse expression (missing value)")?;
+        match next_token.kind {
+            // parenthesis -> nested
+            TokenType::OpenParen => {
+                let value = self.parse_expression()?;
+                // safe because otherwise parse_expression would've thrown an error
+                let next = self.next().unwrap();
+                match next.kind {
+                    TokenType::CloseParen => {
+                        Ok(value)
+                    }
+                    _ => {
+                        Err(format!("Unexpected token \"{}\" after expression (expected closing parenthesis)", next.value))
+                    }
+                }
+            }
+
+            // operator -> unary operator (either + or -)
+            TokenType::Operator => {
+                let operator = Operator::from(next_token.value.as_str());
+                match operator {
+                    Operator::Plus | Operator::Minus => {
+                        let value = self.parse_single_value()?;
+                        let node = UnaryOperationNode {
+                            operator,
+                            expression: Box::new(value),
+                        };
+                        Ok(ExpressionNode::UnaryOperationNode(node))
+                    }
+                    _ => {
+                        Err(format!("The operator \"{}\" can't be used as a unary operator (expected value before it)", next_token.value))
+                    }
+                }
+            }
+
+            // literals (nice and easy)
+            TokenType::NumberLiteral => {
+                if next_token.value.contains(".") {
+                    let node = FloatLiteralNode { value: next_token.value.parse::<f64>().unwrap() };
+                    Ok(ExpressionNode::FloatLiteralNode(node))
+                } else {
+                    let node = IntLiteralNode { value: next_token.value.parse::<i64>().unwrap() };
+                    Ok(ExpressionNode::IntLiteralNode(node))
+                }
+            }
+
+            TokenType::BoolLiteral => {
+                let mut value = false;
+                if next_token.value == "true" {
+                    value = true; 
+                }
+                let node = BoolLiteralNode { value };
+                Ok(ExpressionNode::BoolLiteralNode(node))
+            }
+
+            TokenType::StringLiteral => {
+                let node = StringLiteralNode { value: next_token.value.clone() };
+                Ok(ExpressionNode::StringLiteralNode(node))
+            }
+
+            TokenType::CharLiteral => {
+                let node = CharLiteralNode { value: next_token.value.chars().next().unwrap() };
+                Ok(ExpressionNode::CharLiteralNode(node))
+            }
+            
+            // variables and function calls
+            TokenType::Name => {
+                // so we avoid borrowing errors in case it's a variable
+                let name = next_token.value.clone();
+                let second = self.get_or_err(0, "Unexpected EOF while parsing expression (missed a semicolon?)")?;
+                match second.kind {
+                    // function call
+                    TokenType::OpenParen => {
+                        self.idx -= 1;
+                        let node = self.parse_function_call()?;
+                        Ok(ExpressionNode::FunctionCallNode(node))
+                    }
+                    // variable
+                    _ => {
+                        let node = VariableNode { name };
+                        Ok(ExpressionNode::VariableNode(node))
+                    }
+                }
+            }
+
+            _ => {
+                Err(format!("Unexpected token \"{}\" while parsing expression, expected value", next_token.value))
+            }
+        }
+    }
+
     fn parse_expression(&mut self) -> Result<ExpressionNode, String> {
-        return Ok(ExpressionNode::StringLiteralNode(StringLiteralNode {value: String::from("test string")}));
+        // we need a basis node for the expression, so we parse the first token(s)
+        let mut current_expression = self.parse_single_value()?;
+        loop {
+            let next_token = self.next_or_err("Unexpected EOF when trying to parse expression (missed a semicolon?)")?;
+            match next_token.kind {
+                // stop tokens
+                TokenType::Comma | TokenType::CloseParen | TokenType::Semicolon => {
+                    // expression over, caller of expression function should deal with stop tokens
+                    self.idx -= 1;
+                    break;
+                },
+
+                TokenType::Operator => {
+                    let op = Operator::from(next_token.value.as_str());
+                    match current_expression {
+                        ExpressionNode::BinaryOperationNode(ref mut node) => {
+                            let mut lvl = 0;
+                            let mut current_top_lvl = node;
+                            while current_top_lvl.operator.priority_score() < op.priority_score() {
+                                lvl += 1;
+                                if let ExpressionNode::BinaryOperationNode(ref mut child_node) = *current_top_lvl.right_expr {
+                                    current_top_lvl = child_node;
+                                } else {
+                                    break;
+                                }
+                            }
+                            
+                            if lvl == 0 {
+                                let node = BinaryOperationNode {
+                                    left_expr: Box::new(current_expression),
+                                    operator: op,
+                                    right_expr: Box::new(self.parse_single_value()?),
+                                };
+                                current_expression = ExpressionNode::BinaryOperationNode(node);
+                            } else {
+                                let mut current_top_lvl_expr = &mut current_expression;
+                                for _ in 0..lvl-1 {
+                                    current_top_lvl_expr = match current_top_lvl_expr {
+                                        ExpressionNode::BinaryOperationNode(ref mut node) => {
+                                            node.right_expr.as_mut()
+                                        }
+                                        _ => {return Err(String::from("Internal compiler error while parsing expression"))}
+                                    } 
+                                }
+                                if let ExpressionNode::BinaryOperationNode(node) = current_top_lvl_expr {
+                                    let mut expression_buffer = ExpressionNode::IntLiteralNode(IntLiteralNode{ value: 42 });
+                                    std::mem::swap(node.right_expr.as_mut(), &mut expression_buffer);
+                                    node.right_expr = Box::new(ExpressionNode::BinaryOperationNode(BinaryOperationNode{
+                                        left_expr: Box::from(expression_buffer),
+                                        operator: op,
+                                        right_expr: Box::new(self.parse_single_value()?),
+                                    }));
+                                }
+                            }
+                        }
+                        _ => {
+                            let node = BinaryOperationNode {
+                                left_expr: Box::new(current_expression),
+                                operator: op,
+                                right_expr: Box::new(self.parse_single_value()?),
+                            };
+                            current_expression = ExpressionNode::BinaryOperationNode(node);
+                        }
+                    }
+                }
+
+
+                // part of the expression
+                _ => (),
+            }
+        }
+        return Ok(current_expression);
     }
 
     fn parse_variable_definition(&mut self) -> Result<VariableDefinitionNode, String> {
@@ -235,9 +411,11 @@ impl Parser {
         self.idx += 1;
 
         let mut args: Vec<ExpressionNode> = vec!();
-        let next_token = self.next_or_err("Unexpected EOF when trying to parse function call (expected closing parenthesis)")?;
+        let next_token = self.get_or_err(0, "Unexpected EOF when trying to parse function call (expected closing parenthesis)")?;
         match next_token.kind {
-            TokenType::CloseParen => (),
+            TokenType::CloseParen => {
+                self.idx += 1;
+            },
             _ => {
                 loop {
                     let expression = self.parse_expression()?;
@@ -295,7 +473,7 @@ impl Parser {
         }
     }
 
-    fn parse(&mut self) -> Result<ScopeNode, String> {
+    pub fn parse(&mut self) -> Result<ScopeNode, String> {
         let mut scope_node = ScopeNode { commands: vec!() }; 
         while self.idx < self.tokens.len() {
             scope_node.commands.push(self.parse_command()?);

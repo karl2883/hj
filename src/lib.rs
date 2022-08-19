@@ -57,5 +57,16 @@ pub fn run(config: Config) -> Result<(), ()> {
         output::print_debug(format!("Tokens: {}", token_str).as_str());
     }
 
+    let mut parser = parser::Parser::new(tokens);
+    let scope_node = match parser.parse() {
+        Ok(node) => node,
+        Err(e) => {
+            output::print_error(e.as_str());
+            return Err(());
+        }
+    };
+
+    println!("{:?}", scope_node);
+
     Ok(())
 }
