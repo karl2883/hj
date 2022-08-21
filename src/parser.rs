@@ -21,6 +21,18 @@ impl Operator {
         }
     }
 
+    fn to_str(&self) -> String {
+        String::from(
+            match self {
+                Operator::Plus => "+",
+                Operator::Minus => "-",
+                Operator::Multiply => "*",
+                Operator::Divide => "/",
+                Operator::Modulo => "%",
+            }
+        )
+    }
+
     fn priority_score(&self) -> u32 {
         match self {
             Operator::Plus | Operator::Minus => 1,
@@ -29,86 +41,71 @@ impl Operator {
     }
 }
 
-#[derive(Debug)]
 pub struct ScopeNode {
     commands: Vec<CommandNode>,
 }
 
-#[derive(Debug)]
 struct VariableNode {
     name: String,
 }
 
-#[derive(Debug)]
 struct VariableDefinitionNode {
     vtype: Option<String>, // temporary
     variable: VariableNode,
     expression: Option<Box<ExpressionNode>>,
 }
 
-#[derive(Debug)]
 struct VariableAssignmentNode {
     variable: VariableNode,
     expression: Box<ExpressionNode>,
 }
 
-#[derive(Debug)]
 struct BinaryOperationNode {
     left_expr: Box<ExpressionNode>,
     operator: Operator,
     right_expr: Box<ExpressionNode>,
 }
 
-#[derive(Debug)]
 struct UnaryOperationNode {
     operator: Operator,
     expression: Box<ExpressionNode>,
 }
 
-#[derive(Debug)]
 struct IntLiteralNode {
     value: i64,
 }
 
-#[derive(Debug)]
 struct FloatLiteralNode {
     value: f64,
 }
 
-#[derive(Debug)]
 struct BoolLiteralNode {
     value: bool,
 }
 
-#[derive(Debug)]
 struct StringLiteralNode {
     value: String,
 }
 
-#[derive(Debug)]
 struct CharLiteralNode {
     value: char,
 }
 
-#[derive(Debug)]
 struct FunctionCallNode {
     function: FunctionNode,
     args: Vec<ExpressionNode>,
 }
 
-#[derive(Debug)]
 struct FunctionNode {
     name: String,
 }
 
-#[derive(Debug)]
 enum CommandNode {
     VariableDefinitionNode(VariableDefinitionNode),
     VariableAssignmentNode(VariableAssignmentNode),
     FunctionCallNode(FunctionCallNode),
 }
 
-#[derive(Debug)]
 enum ExpressionNode {
     BinaryOperationNode(BinaryOperationNode),
     UnaryOperationNode(UnaryOperationNode),
@@ -119,6 +116,125 @@ enum ExpressionNode {
     StringLiteralNode(StringLiteralNode),
     CharLiteralNode(CharLiteralNode),
     FunctionCallNode(FunctionCallNode),
+}
+
+fn get_tab_str(tab_lvl: usize) -> String {
+    String::from("\t").repeat(tab_lvl) 
+}
+
+impl ExpressionNode {
+    fn debug_str(&self, tab_lvl: usize) -> String {
+        match self {
+            ExpressionNode::BinaryOperationNode(node) => {
+                let mut s = get_tab_str(tab_lvl) + "Binary operation:\n";
+                s += &node.left_expr.debug_str(tab_lvl+1);
+                s += &format!("{}Operator: {}\n", get_tab_str(tab_lvl+1), node.operator.to_str());
+                s += &node.right_expr.debug_str(tab_lvl+1);
+                s
+            }
+
+            ExpressionNode::UnaryOperationNode(node) => {
+                let mut s = get_tab_str(tab_lvl) + "Unary operation:\n";
+                s += &format!("{}Operator: {}\n", get_tab_str(tab_lvl+1), node.operator.to_str());
+                s += &node.expression.debug_str(tab_lvl+1);
+                s
+            }
+
+            ExpressionNode::VariableNode(node) => {
+                format!("{}Variable with name {}\n", get_tab_str(tab_lvl), node.name)
+            }
+
+            ExpressionNode::FunctionCallNode(node) => {
+                let mut s = get_tab_str(tab_lvl) + "Function call";
+                s += &format!("calling to function {}\n", node.function.name);
+                if node.args.is_empty() {
+                    s += &format!("{}without arguments\n", get_tab_str(tab_lvl));
+                } else {
+                    let mut i = 1;
+                    for arg in &node.args {
+                        s += &format!("{}Argument {}:\n", get_tab_str(tab_lvl), i);
+                        s += &arg.debug_str(tab_lvl+1);
+                        i += 1;
+                    }
+                }
+                s
+            }
+            
+            ExpressionNode::IntLiteralNode(node) => {
+                format!("{}Int literal with value {}\n", get_tab_str(tab_lvl), node.value)
+            }
+
+            ExpressionNode::FloatLiteralNode(node) => {
+                format!("{}Float literal with value {}\n", get_tab_str(tab_lvl), node.value)
+            }
+
+            ExpressionNode::CharLiteralNode(node) => {
+                format!("{}Char literal with value '{}'\n", get_tab_str(tab_lvl), node.value)
+            }
+
+            ExpressionNode::StringLiteralNode(node) => {
+                format!("{}String literal with value \"{}\"\n", get_tab_str(tab_lvl), node.value)
+            }
+
+            ExpressionNode::BoolLiteralNode(node) => {
+                format!("{}Bool literal with value {}\n", get_tab_str(tab_lvl), node.value)
+            }
+        }
+    }
+}
+
+impl CommandNode {
+    fn debug_str(&self, tab_lvl: usize) -> String {
+        match self {
+            CommandNode::VariableDefinitionNode(node) => {
+                let mut s = get_tab_str(tab_lvl) + "Variable definition";
+                if let Some(vtype) = &node.vtype {
+                    s += &format!(" with explicit type {}", vtype);
+                }
+                s += &format!(" defining variable {}\n", node.variable.name);
+                if let Some(expr) = &node.expression {
+                    s += &get_tab_str(tab_lvl+1);
+                    s += "with expression:\n";
+                    s += &expr.as_ref().debug_str(tab_lvl+1);   
+                }
+                s
+            }
+
+            CommandNode::VariableAssignmentNode(node) => {
+                let mut s = get_tab_str(tab_lvl) + "Variable assignment ";
+                s += &format!("assigning to variable {}\n", node.variable.name);
+                s += &format!("{}with expression:\n", get_tab_str(tab_lvl+1));
+                s += &node.expression.as_ref().debug_str(tab_lvl+1);   
+                s
+            }
+
+            CommandNode::FunctionCallNode(node) => {
+                let mut s = get_tab_str(tab_lvl) + "Function call command ";
+                s += &format!("calling to function {}\n", node.function.name);
+                if node.args.is_empty() {
+                    s += &format!("{}without arguments\n", get_tab_str(tab_lvl));
+                } else {
+                    let mut i = 1;
+                    for arg in &node.args {
+                        s += &format!("{}Argument {}:\n", get_tab_str(tab_lvl), i);
+                        s += &arg.debug_str(tab_lvl+1);
+                        i += 1;
+                    }
+                }
+                s
+            }
+        }
+    }
+}
+
+impl ScopeNode {
+    pub fn debug_str(&self) -> String {
+        let mut s = String::from("Outer scope node with commands:\n");
+        for command in &self.commands {
+            s += &command.debug_str(1);
+        }
+        s
+    }
 }
 
 pub struct Parser {
@@ -215,12 +331,12 @@ impl Parser {
             }
 
             TokenType::StringLiteral => {
-                let node = StringLiteralNode { value: next_token.value.clone() };
+                let node = StringLiteralNode { value: next_token.value.clone().trim_matches('"').to_string() };
                 Ok(ExpressionNode::StringLiteralNode(node))
             }
 
             TokenType::CharLiteral => {
-                let node = CharLiteralNode { value: next_token.value.chars().next().unwrap() };
+                let node = CharLiteralNode { value: next_token.value.chars().nth(1).unwrap() };
                 Ok(ExpressionNode::CharLiteralNode(node))
             }
             
@@ -250,6 +366,33 @@ impl Parser {
         }
     }
 
+    fn parse_binary_expression(&mut self, left_expr: ExpressionNode) -> Result<ExpressionNode, String> {
+        // we will assume the next token is an operator
+        let op_token = self.next().unwrap();
+        let op = Operator::from(op_token.value.as_str());
+        let mut right_expr = self.parse_single_value()?;
+        
+        loop {
+            let token_after = self.get_or_err(0, "Unexpected EOF when trying to parsing expression (missed a semicolon?)")?;
+            if let TokenType::Operator = token_after.kind {
+                let next_op = Operator::from(token_after.value.as_str());
+                if next_op.priority_score() > op.priority_score() {
+                    right_expr = self.parse_binary_expression(right_expr)?;
+                    continue;
+                }
+            }
+            break;
+        }
+
+        let node = BinaryOperationNode {
+            left_expr: Box::new(left_expr),
+            operator: op,
+            right_expr: Box::new(right_expr),
+        };
+
+        Ok(ExpressionNode::BinaryOperationNode(node))
+    }
+
     fn parse_expression(&mut self) -> Result<ExpressionNode, String> {
         // we need a basis node for the expression, so we parse the first token(s)
         let mut current_expression = self.parse_single_value()?;
@@ -264,62 +407,14 @@ impl Parser {
                 },
 
                 TokenType::Operator => {
-                    let op = Operator::from(next_token.value.as_str());
-                    match current_expression {
-                        ExpressionNode::BinaryOperationNode(ref mut node) => {
-                            let mut lvl = 0;
-                            let mut current_top_lvl = node;
-                            while current_top_lvl.operator.priority_score() < op.priority_score() {
-                                lvl += 1;
-                                if let ExpressionNode::BinaryOperationNode(ref mut child_node) = *current_top_lvl.right_expr {
-                                    current_top_lvl = child_node;
-                                } else {
-                                    break;
-                                }
-                            }
-                            
-                            if lvl == 0 {
-                                let node = BinaryOperationNode {
-                                    left_expr: Box::new(current_expression),
-                                    operator: op,
-                                    right_expr: Box::new(self.parse_single_value()?),
-                                };
-                                current_expression = ExpressionNode::BinaryOperationNode(node);
-                            } else {
-                                let mut current_top_lvl_expr = &mut current_expression;
-                                for _ in 0..lvl-1 {
-                                    current_top_lvl_expr = match current_top_lvl_expr {
-                                        ExpressionNode::BinaryOperationNode(ref mut node) => {
-                                            node.right_expr.as_mut()
-                                        }
-                                        _ => {return Err(String::from("Internal compiler error while parsing expression"))}
-                                    } 
-                                }
-                                if let ExpressionNode::BinaryOperationNode(node) = current_top_lvl_expr {
-                                    let mut expression_buffer = ExpressionNode::IntLiteralNode(IntLiteralNode{ value: 42 });
-                                    std::mem::swap(node.right_expr.as_mut(), &mut expression_buffer);
-                                    node.right_expr = Box::new(ExpressionNode::BinaryOperationNode(BinaryOperationNode{
-                                        left_expr: Box::from(expression_buffer),
-                                        operator: op,
-                                        right_expr: Box::new(self.parse_single_value()?),
-                                    }));
-                                }
-                            }
-                        }
-                        _ => {
-                            let node = BinaryOperationNode {
-                                left_expr: Box::new(current_expression),
-                                operator: op,
-                                right_expr: Box::new(self.parse_single_value()?),
-                            };
-                            current_expression = ExpressionNode::BinaryOperationNode(node);
-                        }
-                    }
+                    // let the binary expression parsing handle it
+                    self.idx -= 1;
+                    current_expression = self.parse_binary_expression(current_expression)?; 
                 }
 
 
                 // part of the expression
-                _ => (),
+                _ => {return Err(format!("Unexpected token \"{}\" while parsing expression (forgot a semicolon?)", next_token.value))},
             }
         }
         return Ok(current_expression);

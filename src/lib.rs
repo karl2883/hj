@@ -66,7 +66,11 @@ pub fn run(config: Config) -> Result<(), ()> {
         }
     };
 
-    println!("{:?}", scope_node);
+    if config.debug {
+        output::print_debug("The AST has been generated successfully!");
+        let ast_str = scope_node.debug_str();
+        output::print_debug(&ast_str);
+    }
 
     Ok(())
 }

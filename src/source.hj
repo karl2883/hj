@@ -1,5 +1,5 @@
-let i = 29;
-let j = 5 + i * 2;
+let i = (5 + 3 % 2 * -5) * 3 - 1;
+let j = 5 + i * 2 + 4 - 2;
 print(j); // Printing
 j += 2;
 print(j);
