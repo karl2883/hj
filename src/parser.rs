@@ -1,241 +1,6 @@
 use crate::lexer::{Token, TokenType};
 
-#[derive(Debug)]
-enum Operator {
-    Plus,
-    Minus,
-    Multiply,
-    Divide,
-    Modulo,
-}
-
-impl Operator {
-    fn from(op: &str) -> Operator {
-        match op {
-            "+" => Operator::Plus,
-            "-" => Operator::Minus,
-            "*" => Operator::Multiply,
-            "/" => Operator::Divide,
-            "%" => Operator::Modulo,
-            _ => panic!("Internal compiler error (unknown operator)")
-        }
-    }
-
-    fn to_str(&self) -> String {
-        String::from(
-            match self {
-                Operator::Plus => "+",
-                Operator::Minus => "-",
-                Operator::Multiply => "*",
-                Operator::Divide => "/",
-                Operator::Modulo => "%",
-            }
-        )
-    }
-
-    fn priority_score(&self) -> u32 {
-        match self {
-            Operator::Plus | Operator::Minus => 1,
-            Operator::Multiply | Operator::Divide | Operator::Modulo => 2,
-        }
-    }
-}
-
-pub struct ScopeNode {
-    commands: Vec<CommandNode>,
-}
-
-struct VariableNode {
-    name: String,
-}
-
-struct VariableDefinitionNode {
-    vtype: Option<String>, // temporary
-    variable: VariableNode,
-    expression: Option<Box<ExpressionNode>>,
-}
-
-struct VariableAssignmentNode {
-    variable: VariableNode,
-    expression: Box<ExpressionNode>,
-}
-
-struct BinaryOperationNode {
-    left_expr: Box<ExpressionNode>,
-    operator: Operator,
-    right_expr: Box<ExpressionNode>,
-}
-
-struct UnaryOperationNode {
-    operator: Operator,
-    expression: Box<ExpressionNode>,
-}
-
-struct IntLiteralNode {
-    value: i64,
-}
-
-struct FloatLiteralNode {
-    value: f64,
-}
-
-struct BoolLiteralNode {
-    value: bool,
-}
-
-struct StringLiteralNode {
-    value: String,
-}
-
-struct CharLiteralNode {
-    value: char,
-}
-
-struct FunctionCallNode {
-    function: FunctionNode,
-    args: Vec<ExpressionNode>,
-}
-
-struct FunctionNode {
-    name: String,
-}
-
-enum CommandNode {
-    VariableDefinitionNode(VariableDefinitionNode),
-    VariableAssignmentNode(VariableAssignmentNode),
-    FunctionCallNode(FunctionCallNode),
-}
-
-enum ExpressionNode {
-    BinaryOperationNode(BinaryOperationNode),
-    UnaryOperationNode(UnaryOperationNode),
-    VariableNode(VariableNode),
-    IntLiteralNode(IntLiteralNode),
-    FloatLiteralNode(FloatLiteralNode),
-    BoolLiteralNode(BoolLiteralNode),
-    StringLiteralNode(StringLiteralNode),
-    CharLiteralNode(CharLiteralNode),
-    FunctionCallNode(FunctionCallNode),
-}
-
-fn get_tab_str(tab_lvl: usize) -> String {
-    String::from("\t").repeat(tab_lvl) 
-}
-
-impl ExpressionNode {
-    fn debug_str(&self, tab_lvl: usize) -> String {
-        match self {
-            ExpressionNode::BinaryOperationNode(node) => {
-                let mut s = get_tab_str(tab_lvl) + "Binary operation:\n";
-                s += &node.left_expr.debug_str(tab_lvl+1);
-                s += &format!("{}Operator: {}\n", get_tab_str(tab_lvl+1), node.operator.to_str());
-                s += &node.right_expr.debug_str(tab_lvl+1);
-                s
-            }
-
-            ExpressionNode::UnaryOperationNode(node) => {
-                let mut s = get_tab_str(tab_lvl) + "Unary operation:\n";
-                s += &format!("{}Operator: {}\n", get_tab_str(tab_lvl+1), node.operator.to_str());
-                s += &node.expression.debug_str(tab_lvl+1);
-                s
-            }
-
-            ExpressionNode::VariableNode(node) => {
-                format!("{}Variable with name {}\n", get_tab_str(tab_lvl), node.name)
-            }
-
-            ExpressionNode::FunctionCallNode(node) => {
-                let mut s = get_tab_str(tab_lvl) + "Function call";
-                s += &format!("calling to function {}\n", node.function.name);
-                if node.args.is_empty() {
-                    s += &format!("{}without arguments\n", get_tab_str(tab_lvl));
-                } else {
-                    let mut i = 1;
-                    for arg in &node.args {
-                        s += &format!("{}Argument {}:\n", get_tab_str(tab_lvl), i);
-                        s += &arg.debug_str(tab_lvl+1);
-                        i += 1;
-                    }
-                }
-                s
-            }
-            
-            ExpressionNode::IntLiteralNode(node) => {
-                format!("{}Int literal with value {}\n", get_tab_str(tab_lvl), node.value)
-            }
-
-            ExpressionNode::FloatLiteralNode(node) => {
-                format!("{}Float literal with value {}\n", get_tab_str(tab_lvl), node.value)
-            }
-
-            ExpressionNode::CharLiteralNode(node) => {
-                format!("{}Char literal with value '{}'\n", get_tab_str(tab_lvl), node.value)
-            }
-
-            ExpressionNode::StringLiteralNode(node) => {
-                format!("{}String literal with value \"{}\"\n", get_tab_str(tab_lvl), node.value)
-            }
-
-            ExpressionNode::BoolLiteralNode(node) => {
-                format!("{}Bool literal with value {}\n", get_tab_str(tab_lvl), node.value)
-            }
-        }
-    }
-}
-
-impl CommandNode {
-    fn debug_str(&self, tab_lvl: usize) -> String {
-        match self {
-            CommandNode::VariableDefinitionNode(node) => {
-                let mut s = get_tab_str(tab_lvl) + "Variable definition";
-                if let Some(vtype) = &node.vtype {
-                    s += &format!(" with explicit type {}", vtype);
-                }
-                s += &format!(" defining variable {}\n", node.variable.name);
-                if let Some(expr) = &node.expression {
-                    s += &get_tab_str(tab_lvl+1);
-                    s += "with expression:\n";
-                    s += &expr.as_ref().debug_str(tab_lvl+1);   
-                }
-                s
-            }
-
-            CommandNode::VariableAssignmentNode(node) => {
-                let mut s = get_tab_str(tab_lvl) + "Variable assignment ";
-                s += &format!("assigning to variable {}\n", node.variable.name);
-                s += &format!("{}with expression:\n", get_tab_str(tab_lvl+1));
-                s += &node.expression.as_ref().debug_str(tab_lvl+1);   
-                s
-            }
-
-            CommandNode::FunctionCallNode(node) => {
-                let mut s = get_tab_str(tab_lvl) + "Function call command ";
-                s += &format!("calling to function {}\n", node.function.name);
-                if node.args.is_empty() {
-                    s += &format!("{}without arguments\n", get_tab_str(tab_lvl));
-                } else {
-                    let mut i = 1;
-                    for arg in &node.args {
-                        s += &format!("{}Argument {}:\n", get_tab_str(tab_lvl), i);
-                        s += &arg.debug_str(tab_lvl+1);
-                        i += 1;
-                    }
-                }
-                s
-            }
-        }
-    }
-}
-
-impl ScopeNode {
-    pub fn debug_str(&self) -> String {
-        let mut s = String::from("Outer scope node with commands:\n");
-        for command in &self.commands {
-            s += &command.debug_str(1);
-        }
-        s
-    }
-}
+use crate::nodes::*;
 
 pub struct Parser {
     tokens: Vec<Token>,
@@ -300,7 +65,7 @@ impl Parser {
                         let value = self.parse_single_value()?;
                         let node = UnaryOperationNode {
                             operator,
-                            expression: Box::new(value),
+                            expression: Box::new(TExpressionNode{node: value, t: None}),
                         };
                         Ok(ExpressionNode::UnaryOperationNode(node))
                     }
@@ -385,9 +150,9 @@ impl Parser {
         }
 
         let node = BinaryOperationNode {
-            left_expr: Box::new(left_expr),
+            left_expr: Box::new(TExpressionNode { node: left_expr, t: None }),
             operator: op,
-            right_expr: Box::new(right_expr),
+            right_expr: Box::new(TExpressionNode { node: right_expr, t: None }),
         };
 
         Ok(ExpressionNode::BinaryOperationNode(node))
@@ -455,7 +220,7 @@ impl Parser {
             _ => {return Err(format!("Unexpected token \"{}\" while parsing variable assignment (expected semicolon)", semicolon.value))}
         }
 
-        return Ok(VariableDefinitionNode {vtype, variable: var_node, expression: Some(Box::new(expression))})
+        return Ok(VariableDefinitionNode {vtype, variable: var_node, expression: Some(Box::new(TExpressionNode { node: expression, t: None }))})
     }
 
     fn parse_variable_assignment(&mut self) -> Result<VariableAssignmentNode, String> {
@@ -478,9 +243,9 @@ impl Parser {
                 let operator = assignment_operator.get(..1).unwrap();
                 let operator = Operator::from(operator);
                 let op_node = BinaryOperationNode {
-                    left_expr: Box::new(ExpressionNode::VariableNode(VariableNode {name: var_name})),
+                    left_expr: Box::new(TExpressionNode { node: ExpressionNode::VariableNode(VariableNode {name: var_name}), t: None }),
                     operator,
-                    right_expr: Box::new(self.parse_expression()?)
+                    right_expr: Box::new(TExpressionNode { node: self.parse_expression()?, t: None })
                 };
                 ExpressionNode::BinaryOperationNode(op_node)
             }
@@ -493,7 +258,7 @@ impl Parser {
             _ => {return Err(format!("Unexpected token \"{}\" while parsing variable assignment (expected semicolon)", semicolon.value))}
         }
 
-        return Ok(VariableAssignmentNode {variable: var_node, expression: Box::new(expression)})
+        return Ok(VariableAssignmentNode {variable: var_node, expression: Box::new(TExpressionNode {node: expression, t: None})})
     }
 
     fn parse_function_call(&mut self) -> Result<FunctionCallNode, String> {
@@ -505,7 +270,7 @@ impl Parser {
         // we can also assume that the opening parenthesis is there for the same reason
         self.idx += 1;
 
-        let mut args: Vec<ExpressionNode> = vec!();
+        let mut args: Vec<TExpressionNode> = vec!();
         let next_token = self.get_or_err(0, "Unexpected EOF when trying to parse function call (expected closing parenthesis)")?;
         match next_token.kind {
             TokenType::CloseParen => {
@@ -514,7 +279,7 @@ impl Parser {
             _ => {
                 loop {
                     let expression = self.parse_expression()?;
-                    args.push(expression);
+                    args.push(TExpressionNode {node: expression, t: None});
                     let next_token = self.next_or_err("Unexpected EOF when trying to parse function call (expected closing parenthesis)")?;
                     match next_token.kind {
                         TokenType::CloseParen => {break;}

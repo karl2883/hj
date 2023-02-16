@@ -5,7 +5,9 @@ use clap::Parser;
 use crate::lexer::create_tokens;
 
 mod lexer;
+mod nodes;
 mod parser;
+mod variable_traverser;
 mod output;
 
 // clap generates cli parsing into this struct for us through macros
@@ -58,7 +60,7 @@ pub fn run(config: Config) -> Result<(), ()> {
     }
 
     let mut parser = parser::Parser::new(tokens);
-    let scope_node = match parser.parse() {
+    let mut scope_node = match parser.parse() {
         Ok(node) => node,
         Err(e) => {
             output::print_error(e.as_str());
@@ -71,6 +73,18 @@ pub fn run(config: Config) -> Result<(), ()> {
         let ast_str = scope_node.debug_str();
         output::print_debug(&ast_str);
     }
+
+    let mut variable_traverser = variable_traverser::VariableTraverser::new();
+    match variable_traverser.traverse(&mut scope_node) {
+        Ok(_) => {},
+        Err(e) => {
+            output::print_error(e.as_str());
+            return Err(());
+        }
+    }
+    let variable_table = variable_traverser.variable_table;
+    let vtable_len = variable_table.len();
+    println!("Amount of variables: {}", vtable_len);
 
     Ok(())
 }

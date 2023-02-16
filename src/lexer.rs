@@ -44,7 +44,7 @@ impl TokenType {
     }
 }
 
-const INBUILT_TYPES: [&str; 7] = ["int", "uint", "float", "ufloat", "bool", "char", "str"];
+const INBUILT_TYPES: [&str; 5] = ["int", "float", "bool", "char", "str"];
 const KEYWORDS: [&str; 4] = ["let", "if", "else", "while"];
 const BOOL_LITERALS: [&str; 2] = ["true", "false"];
 
